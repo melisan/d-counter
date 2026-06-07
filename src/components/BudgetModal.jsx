@@ -1,11 +1,15 @@
 import { useState } from 'react'
 
-export default function BudgetModal({ budgets, participants, onSave, onClose }) {
-  const [values, setValues] = useState({ ...budgets })
+const DEFAULT_DAILY = 10
 
-  function handleChange(person, raw) {
+export default function BudgetModal({ budgets, participants, onSave, onClose }) {
+  const [values, setValues] = useState(
+    Object.fromEntries(participants.map(p => [p.name, budgets[p.name] ?? DEFAULT_DAILY]))
+  )
+
+  function handleChange(name, raw) {
     const n = parseInt(raw)
-    setValues(v => ({ ...v, [person]: isNaN(n) || n < 1 ? 1 : n }))
+    setValues(v => ({ ...v, [name]: isNaN(n) || n < 1 ? 1 : n }))
   }
 
   function handleSave() {
@@ -20,7 +24,7 @@ export default function BudgetModal({ budgets, participants, onSave, onClose }) 
     >
       <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-sm px-6 pt-6 pb-8">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-bold text-gray-800">월간 한도 설정</h2>
+          <h2 className="text-base font-bold text-gray-800">일일 목표 설정</h2>
           <button
             onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 text-sm transition-colors"
@@ -30,12 +34,14 @@ export default function BudgetModal({ budgets, participants, onSave, onClose }) 
         </div>
 
         <div className="space-y-4">
-          {participants.map(person => (
-            <div key={person}>
-              <label className="text-sm font-medium text-gray-600 block mb-2">{person}</label>
+          {participants.map(({ name, icon }) => (
+            <div key={name}>
+              <label className="text-sm font-medium text-gray-600 flex items-center gap-1.5 mb-2">
+                <span>{icon}</span>{name}
+              </label>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleChange(person, (values[person] ?? 150) - 10)}
+                  onClick={() => handleChange(name, (values[name] ?? DEFAULT_DAILY) - 1)}
                   className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold transition-colors"
                 >
                   −
@@ -43,17 +49,17 @@ export default function BudgetModal({ budgets, participants, onSave, onClose }) 
                 <input
                   type="number"
                   min="1"
-                  value={values[person] ?? 150}
-                  onChange={e => handleChange(person, e.target.value)}
+                  value={values[name] ?? DEFAULT_DAILY}
+                  onChange={e => handleChange(name, e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 <button
-                  onClick={() => handleChange(person, (values[person] ?? 150) + 10)}
+                  onClick={() => handleChange(name, (values[name] ?? DEFAULT_DAILY) + 1)}
                   className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold transition-colors"
                 >
                   +
                 </button>
-                <span className="text-sm text-gray-400 w-12">개비/월</span>
+                <span className="text-sm text-gray-400 w-16">개비/일</span>
               </div>
             </div>
           ))}

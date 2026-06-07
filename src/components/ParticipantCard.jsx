@@ -49,8 +49,8 @@ export default function ParticipantCard({
   }, [lastSmoked])
 
   const t    = THEMES[name] || THEMES['진욱']
-  const pct  = budget > 0 ? Math.min(100, Math.round((monthTotal / budget) * 100)) : 0
-  const over = monthTotal > budget
+  const pct  = budget > 0 ? Math.min(100, Math.round((todayCount / budget) * 100)) : 0
+  const over = todayCount > budget
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -60,7 +60,7 @@ export default function ParticipantCard({
           <span className="text-5xl leading-none">{icon}</span>
           <div>
             <span className={`inline-block text-sm font-bold px-2.5 py-0.5 rounded-full ${t.badge}`}>{name}</span>
-            <p className="text-xs text-gray-400 mt-0.5">월 한도 {budget}개비</p>
+            <p className="text-xs text-gray-400 mt-0.5">일일 목표 {budget}개비</p>
           </div>
         </div>
       </div>
@@ -100,12 +100,12 @@ export default function ParticipantCard({
           </div>
         </div>
 
-        {/* Monthly progress */}
+        {/* Daily progress */}
         <div>
           <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-xs text-gray-400">이번 달 합계</span>
+            <span className="text-xs text-gray-400">오늘 목표</span>
             <span className={`text-sm font-bold ${over ? 'text-red-500' : t.text}`}>
-              {monthTotal} / {budget}
+              {todayCount} / {budget}
               <span className="text-xs font-normal text-gray-400 ml-0.5">개비</span>
             </span>
           </div>
@@ -117,9 +117,9 @@ export default function ParticipantCard({
           </div>
           <div className="flex justify-between text-[11px] mt-1.5">
             <span className={over ? 'text-red-500 font-medium' : 'text-gray-400'}>
-              {over ? `⚠️ ${monthTotal - budget}개비 초과` : `${pct}% 사용`}
+              {over ? `⚠️ ${todayCount - budget}개비 초과` : `${pct}% 사용`}
             </span>
-            {!over && <span className="text-gray-400">남은 한도 {budget - monthTotal}개비</span>}
+            {!over && <span className="text-gray-400">남은 한도 {budget - todayCount}개비</span>}
           </div>
         </div>
       </div>
