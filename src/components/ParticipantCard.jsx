@@ -52,9 +52,10 @@ export default function ParticipantCard({
     return () => clearInterval(id)
   }, [lastSmoked])
 
-  const t    = THEMES[name] || THEMES['진욱']
-  const pct  = budget > 0 ? Math.min(100, Math.round((todayCount / budget) * 100)) : 0
-  const over = todayCount > budget
+  const t         = THEMES[name] || THEMES['진욱']
+  const remaining = budget - todayCount
+  const pct       = budget > 0 ? Math.max(0, Math.round((remaining / budget) * 100)) : 0
+  const over      = todayCount > budget
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg ${t.shadow} overflow-hidden`}>
@@ -68,9 +69,9 @@ export default function ParticipantCard({
               <p className="text-xs text-white/70 mt-0.5">일일 목표 {budget}개비</p>
             </div>
           </div>
-          {/* Mini today badge */}
+          {/* Smoked today badge */}
           <div className={`rounded-xl px-3 py-1.5 ${t.badge}`}>
-            <p className="text-xs text-white/70 leading-none mb-0.5">오늘</p>
+            <p className="text-xs text-white/70 leading-none mb-0.5">피운 개비</p>
             <p className="text-xl font-bold text-white leading-none tabular-nums">{todayCount}</p>
           </div>
         </div>
@@ -85,7 +86,7 @@ export default function ParticipantCard({
           </p>
         </div>
 
-        {/* +/- counter */}
+        {/* Remaining countdown + +/- buttons */}
         <div className="flex items-center justify-center gap-6">
           <button
             onClick={onDecrement}
@@ -94,9 +95,12 @@ export default function ParticipantCard({
           >
             −
           </button>
-          <span className="text-5xl font-bold text-gray-800 tabular-nums w-16 text-center">
-            {todayCount}
-          </span>
+          <div className="text-center w-20">
+            <p className={`text-5xl font-bold tabular-nums leading-none ${over ? 'text-red-500' : 'text-gray-800'}`}>
+              {over ? `+${Math.abs(remaining)}` : remaining}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">남은 개비</p>
+          </div>
           <button
             onClick={onIncrement}
             className={`w-14 h-14 rounded-2xl text-white text-3xl font-light transition-all active:scale-95 select-none shadow-lg ${t.btn}`}
@@ -105,13 +109,12 @@ export default function ParticipantCard({
           </button>
         </div>
 
-        {/* Daily progress bar */}
+        {/* Draining progress bar */}
         <div>
           <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-xs text-gray-400">오늘 목표 달성률</span>
+            <span className="text-xs text-gray-400">오늘 남은 한도</span>
             <span className={`text-sm font-bold ${over ? 'text-red-500' : t.text}`}>
-              {todayCount} / {budget}
-              <span className="text-xs font-normal text-gray-400 ml-0.5">개비</span>
+              {over ? `${Math.abs(remaining)}개비 초과` : `${remaining} / ${budget}개비`}
             </span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -121,7 +124,7 @@ export default function ParticipantCard({
             />
           </div>
           <p className={`text-[11px] mt-1.5 ${over ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
-            {over ? `⚠️ 목표 초과 +${todayCount - budget}개비` : pct === 100 ? '🎉 목표 도달!' : `${pct}%`}
+            {over ? `⚠️ 한도 초과` : remaining === 0 ? '🚫 한도 소진' : `${pct}% 남음`}
           </p>
         </div>
       </div>
