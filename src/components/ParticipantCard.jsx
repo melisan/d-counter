@@ -97,9 +97,9 @@ export default function ParticipantCard({
           </button>
           <div className="text-center w-20">
             <p className={`text-5xl font-bold tabular-nums leading-none ${over ? 'text-red-500' : 'text-gray-800'}`}>
-              {over ? `+${Math.abs(remaining)}` : remaining}
+              {todayCount}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1">남은 개비</p>
+            <p className="text-[11px] text-gray-400 mt-1">피운 개비</p>
           </div>
           <button
             onClick={onIncrement}
