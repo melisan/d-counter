@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react'
+import MiseonIcon from './icons/MiseonIcon'
+import JinwookIcon from './icons/JinwookIcon'
+
+const ICON_COMPONENTS = {
+  '미선': MiseonIcon,
+  '진욱': JinwookIcon,
+}
 
 const THEMES = {
   '미선': {
@@ -38,7 +45,7 @@ function formatElapsed(ms) {
 }
 
 export default function ParticipantCard({
-  name, icon, todayCount, monthTotal, budget, lastSmoked,
+  name, todayCount, monthTotal, budget, lastSmoked,
   onIncrement, onDecrement,
 }) {
   const [elapsed, setElapsed] = useState(
@@ -52,7 +59,8 @@ export default function ParticipantCard({
     return () => clearInterval(id)
   }, [lastSmoked])
 
-  const t         = THEMES[name] || THEMES['진욱']
+  const t           = THEMES[name] || THEMES['진욱']
+  const IconComponent = ICON_COMPONENTS[name]
   const remaining = budget - todayCount
   const pct       = budget > 0 ? Math.max(0, Math.round((remaining / budget) * 100)) : 0
   const over      = todayCount > budget
@@ -63,7 +71,7 @@ export default function ParticipantCard({
       <div className={`bg-gradient-to-r ${t.header} px-5 py-4`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-4xl leading-none drop-shadow">{icon}</span>
+            {IconComponent && <IconComponent active={true} size={44} />}
             <div>
               <p className="text-lg font-bold text-white leading-none">{name}</p>
               <p className="text-xs text-white/70 mt-0.5">일일 목표 {budget}개비</p>

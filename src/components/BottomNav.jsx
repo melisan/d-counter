@@ -1,8 +1,15 @@
 import { PARTICIPANTS } from '../constants'
+import MiseonIcon from './icons/MiseonIcon'
+import JinwookIcon from './icons/JinwookIcon'
+
+const ICON_COMPONENTS = {
+  miseon:  MiseonIcon,
+  jinwook: JinwookIcon,
+}
 
 const TABS = [
-  ...PARTICIPANTS.map(p => ({ id: p.id, label: p.name, icon: p.icon })),
-  { id: 'calendar', label: '달력', icon: '📅' },
+  ...PARTICIPANTS.map(p => ({ id: p.id, label: p.name })),
+  { id: 'calendar', label: '달력' },
 ]
 
 const ACTIVE = {
@@ -23,6 +30,7 @@ export default function BottomNav({ active, onChange }) {
       <div className="max-w-lg mx-auto flex">
         {TABS.map(tab => {
           const isActive = active === tab.id
+          const IconComponent = ICON_COMPONENTS[tab.id]
           return (
             <button
               key={tab.id}
@@ -34,8 +42,12 @@ export default function BottomNav({ active, onChange }) {
               {isActive && (
                 <span className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${INDICATOR[tab.id]}`} />
               )}
-              <span className={`text-2xl leading-none transition-transform ${isActive ? 'scale-110' : 'scale-100'}`}>
-                {tab.icon}
+              <span className={`leading-none transition-transform ${isActive ? 'scale-110' : 'scale-100'}`}>
+                {IconComponent ? (
+                  <IconComponent active={isActive} size={28} />
+                ) : (
+                  <span className="text-2xl">📅</span>
+                )}
               </span>
               <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-normal'}`}>
                 {tab.label}
