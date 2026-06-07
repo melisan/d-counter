@@ -69,11 +69,6 @@ export default function ParticipantCard({
               <p className="text-xs text-white/70 mt-0.5">일일 목표 {budget}개비</p>
             </div>
           </div>
-          {/* Smoked today badge */}
-          <div className={`rounded-xl px-3 py-1.5 ${t.badge}`}>
-            <p className="text-xs text-white/70 leading-none mb-0.5">피운 개비</p>
-            <p className="text-xl font-bold text-white leading-none tabular-nums">{todayCount}</p>
-          </div>
         </div>
       </div>
 
