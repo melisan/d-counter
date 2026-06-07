@@ -4,16 +4,7 @@ import BottomNav from './components/BottomNav'
 import ParticipantCard from './components/ParticipantCard'
 import CalendarPage from './components/CalendarPage'
 import BudgetModal from './components/BudgetModal'
-
-export const PARTICIPANTS = [
-  { id: 'miseon',  name: '미선', icon: '🥰' },
-  { id: 'jinwook', name: '진욱', icon: '🐻' },
-]
-
-const STORAGE_KEY = 'cigarette_counter_v1'
-const PAGE_KEY    = 'cigarette_counter_page'
-const DEFAULT_BUDGET = 150
-const POLL_MS = 5000
+import { PARTICIPANTS, DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, POLL_MS } from './constants'
 
 function getMonthKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`

@@ -1,4 +1,4 @@
-import { PARTICIPANTS } from '../App'
+import { PARTICIPANTS } from '../constants'
 
 const TABS = [
   ...PARTICIPANTS.map(p => ({ id: p.id, label: p.name, icon: p.icon })),
