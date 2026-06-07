@@ -40,7 +40,7 @@ export default function CalendarPage({ data }) {
   return (
     <div>
       {/* Month nav */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 bg-white rounded-2xl px-4 py-3 shadow-sm">
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors"
@@ -70,7 +70,7 @@ export default function CalendarPage({ data }) {
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
 
@@ -81,9 +81,9 @@ export default function CalendarPage({ data }) {
           return (
             <div
               key={day}
-              className={`rounded-xl p-1 min-h-[52px] flex flex-col ${
+              className={`rounded-xl p-1.5 min-h-[52px] flex flex-col shadow-sm ${
                 isToday
-                  ? 'bg-gray-800 text-white'
+                  ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-violet-200'
                   : 'bg-white border border-gray-100'
               }`}
             >

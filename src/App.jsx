@@ -91,7 +91,7 @@ export default function App() {
   const activePerson = PARTICIPANTS.find(p => p.id === page)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50 to-blue-50 pb-20">
       <Header today={now} onSettings={() => setShowBudgetModal(true)} />
 
       <main className="max-w-lg mx-auto px-4 py-5">
