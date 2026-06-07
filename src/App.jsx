@@ -33,32 +33,37 @@ function saveData(data) {
 
 export default function App() {
   const [data, setData] = useState(loadData)
-  const today = getDayKey(new Date())
-  const currentMonthKey = getMonthKey(new Date())
-  const [viewMonth, setViewMonth] = useState(currentMonthKey)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
 
-  const budgets = data.budgets || Object.fromEntries(PARTICIPANTS.map(p => [p, DEFAULT_BUDGET]))
-  const monthDays = data.months?.[viewMonth] || {}
-  const isCurrentMonth = viewMonth === currentMonthKey
+  const now = new Date()
+  const today = getDayKey(now)
+  const monthKey = getMonthKey(now)
 
-  function getMonthTotal(person) {
-    return Object.values(monthDays[person] || {}).reduce((s, n) => s + n, 0)
-  }
+  const budgets = data.budgets || Object.fromEntries(PARTICIPANTS.map(p => [p, DEFAULT_BUDGET]))
+  const monthDays = data.months?.[monthKey] || {}
+  const lastSmoked = data.lastSmoked || {}
 
   function getTodayCount(person) {
     return monthDays[person]?.[today] ?? 0
   }
 
+  function getMonthTotal(person) {
+    return Object.values(monthDays[person] || {}).reduce((s, n) => s + n, 0)
+  }
+
   function updateCount(person, delta) {
-    if (!isCurrentMonth) return
     setData(prev => {
       const next = structuredClone(prev)
       next.months ??= {}
-      next.months[viewMonth] ??= {}
-      next.months[viewMonth][person] ??= {}
-      const cur = next.months[viewMonth][person][today] ?? 0
-      next.months[viewMonth][person][today] = Math.max(0, cur + delta)
+      next.months[monthKey] ??= {}
+      next.months[monthKey][person] ??= {}
+      const cur = next.months[monthKey][person][today] ?? 0
+      const newCount = Math.max(0, cur + delta)
+      next.months[monthKey][person][today] = newCount
+      if (delta > 0) {
+        next.lastSmoked ??= {}
+        next.lastSmoked[person] = new Date().toISOString()
+      }
       saveData(next)
       return next
     })
@@ -72,21 +77,9 @@ export default function App() {
     })
   }
 
-  function navigateMonth(dir) {
-    const [y, m] = viewMonth.split('-').map(Number)
-    const d = new Date(y, m - 1 + dir, 1)
-    setViewMonth(getMonthKey(d))
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header
-        viewMonth={viewMonth}
-        isCurrentMonth={isCurrentMonth}
-        onPrev={() => navigateMonth(-1)}
-        onNext={() => navigateMonth(1)}
-        onSettings={() => setShowBudgetModal(true)}
-      />
+      <Header today={now} onSettings={() => setShowBudgetModal(true)} />
 
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4">
         {PARTICIPANTS.map(person => (
@@ -96,8 +89,7 @@ export default function App() {
             todayCount={getTodayCount(person)}
             monthTotal={getMonthTotal(person)}
             budget={budgets[person] ?? DEFAULT_BUDGET}
-            dailyLog={monthDays[person] || {}}
-            isCurrentMonth={isCurrentMonth}
+            lastSmoked={lastSmoked[person] || null}
             onIncrement={() => updateCount(person, 1)}
             onDecrement={() => updateCount(person, -1)}
           />
