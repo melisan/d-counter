@@ -108,50 +108,39 @@ export default function App() {
     return data.rageMonths?.[monthKey]?.[name]?.[today] ?? []
   }
 
-  function addRage(name, memo) {
+  function addRage(name, sections) {
+    const ts    = new Date().toISOString()
+    const entry = { ts }
+    Object.keys(sections).forEach(key => {
+      entry[key] = sections[key]?.trim() ? { text: sections[key].trim(), ts } : null
+    })
     setData(prev => {
       const next = structuredClone(prev)
       next.rageMonths ??= {}
       next.rageMonths[monthKey] ??= {}
       next.rageMonths[monthKey][name] ??= {}
       next.rageMonths[monthKey][name][today] ??= []
-      next.rageMonths[monthKey][name][today].push({ ts: new Date().toISOString(), memo })
+      next.rageMonths[monthKey][name][today].push(entry)
       next.lastRage ??= {}
-      next.lastRage[name] = new Date().toISOString()
+      next.lastRage[name] = ts
       saveLocal(next)
       pushRemote(next).catch(() => {})
       return next
     })
   }
 
-  function removeRage(name) {
-    setData(prev => {
-      const next   = structuredClone(prev)
-      const events = next.rageMonths?.[monthKey]?.[name]?.[today]
-      if (events?.length > 0) {
-        next.rageMonths[monthKey][name][today] = events.slice(0, -1)
-      }
-      saveLocal(next)
-      pushRemote(next).catch(() => {})
-      return next
-    })
-  }
-
-  function tsToMonthDay(ts) {
-    const d    = new Date(ts)
-    const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const dKey = getDayKey(d)
-    return { mKey, dKey }
-  }
-
-  function editRageMemo(name, ts, newMemo) {
-    const { mKey, dKey } = tsToMonthDay(ts)
+  function editRageSection(name, entryTs, sectionKey, newText) {
+    const { mKey, dKey } = tsToMonthDay(entryTs)
     setData(prev => {
       const next   = structuredClone(prev)
       const events = next.rageMonths?.[mKey]?.[name]?.[dKey]
       if (events) {
-        const idx = events.findIndex(e => e.ts === ts)
-        if (idx !== -1) events[idx] = { ...events[idx], memo: newMemo }
+        const idx = events.findIndex(e => e.ts === entryTs)
+        if (idx !== -1) {
+          events[idx][sectionKey] = newText
+            ? { text: newText, ts: new Date().toISOString() }
+            : null
+        }
       }
       saveLocal(next)
       pushRemote(next).catch(() => {})
@@ -259,8 +248,7 @@ export default function App() {
             : mode === 'rage'
               ? <RageCalendarPage
                   data={data}
-                  adminMode={adminMode}
-                  onEditMemo={editRageMemo}
+                  onEditSection={editRageSection}
                   onDeleteEntry={deleteRageEntry}
                 />
               : <GraceCalendarPage
@@ -288,11 +276,9 @@ export default function App() {
               name={activePerson.name}
               todayEvents={getRageTodayEvents(activePerson.name)}
               lastRage={lastRage[activePerson.name] || null}
-              onAdd={(memo) => addRage(activePerson.name, memo)}
-              onRemove={() => removeRage(activePerson.name)}
-              adminMode={adminMode}
-              onEditMemo={(ts, newMemo) => editRageMemo(activePerson.name, ts, newMemo)}
+              onAdd={(sections) => addRage(activePerson.name, sections)}
               onDeleteEntry={(ts) => deleteRageEntry(activePerson.name, ts)}
+              onEditSection={(entryTs, key, text) => editRageSection(activePerson.name, entryTs, key, text)}
             />
           ) : (
             <GraceCard

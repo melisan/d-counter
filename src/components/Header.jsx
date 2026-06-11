@@ -2,7 +2,7 @@ const DAYS   = ['일','월','화','수','목','금','토']
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
 export default function Header({ today, onSettings, mode, onModeChange, adminMode, onAdminToggle }) {
-  const showAdmin = mode === 'rage' || mode === 'grace'
+  const showAdmin = mode === 'grace'
 
   return (
     <header className="bg-gradient-to-r from-violet-600 to-purple-700 sticky top-0 z-10 shadow-lg shadow-purple-200">
