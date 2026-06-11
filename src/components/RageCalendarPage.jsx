@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PARTICIPANTS } from '../constants'
 import MiseonIcon from './icons/MiseonIcon'
 import JinwookIcon from './icons/JinwookIcon'
@@ -7,8 +7,8 @@ const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9�
 const DAY_NAMES   = ['일','월','화','수','목','금','토']
 
 const PERSON_STYLE = {
-  '미선': { dot: 'bg-rose-400',   text: 'text-rose-600',   badge: 'bg-rose-50 text-rose-600 border-rose-100'   },
-  '진욱': { dot: 'bg-orange-400', text: 'text-orange-600', badge: 'bg-orange-50 text-orange-600 border-orange-100' },
+  '미선': { text: 'text-rose-600',   ring: 'focus:ring-red-300',    saveBtn: 'bg-red-500 hover:bg-red-600 text-white'    },
+  '진욱': { text: 'text-orange-600', ring: 'focus:ring-orange-300', saveBtn: 'bg-orange-500 hover:bg-orange-600 text-white' },
 }
 
 const ICON_COMPONENTS = {
@@ -18,9 +18,11 @@ const ICON_COMPONENTS = {
 
 function pad(n) { return String(n).padStart(2, '0') }
 
-export default function RageCalendarPage({ data }) {
+export default function RageCalendarPage({ data, adminMode, onEditMemo, onDeleteEntry }) {
   const now = new Date()
   const [viewDate, setViewDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
+  const [editingTs, setEditingTs] = useState(null)
+  const [editMemo, setEditMemo]   = useState('')
 
   const year  = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -31,23 +33,28 @@ export default function RageCalendarPage({ data }) {
   const firstDow    = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
+  // Cancel any open edit when admin mode turns off
+  useEffect(() => { if (!adminMode) setEditingTs(null) }, [adminMode])
+
   function navigate(dir) { setViewDate(new Date(year, month + dir, 1)) }
 
-  function getDayEvents(day, name) {
-    return monthRage[name]?.[`${year}-${pad(month + 1)}-${pad(day)}`] ?? []
+  function getDayCount(day, name) {
+    return (monthRage[name]?.[`${year}-${pad(month + 1)}-${pad(day)}`] ?? []).length
   }
 
-  function getDayCount(day, name) { return getDayEvents(day, name).length }
+  function startEdit(ev) { setEditingTs(ev.ts); setEditMemo(ev.memo) }
+  function commitEdit(name) { onEditMemo(name, editingTs, editMemo.trim()); setEditingTs(null) }
+  function cancelEdit() { setEditingTs(null) }
 
   // Build calendar cells
   const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
   while (cells.length % 7 !== 0) cells.push(null)
 
-  // Collect all rage entries for this month (for the log below)
+  // Collect all rage entries for this month for the log
   const allEntries = []
   PARTICIPANTS.forEach(p => {
     const personDays = monthRage[p.name] || {}
-    Object.entries(personDays).forEach(([day, events]) => {
+    Object.entries(personDays).forEach(([, events]) => {
       events.forEach(ev => allEntries.push({ ...ev, name: p.name }))
     })
   })
@@ -57,31 +64,15 @@ export default function RageCalendarPage({ data }) {
     <div>
       {/* Month nav */}
       <div className="flex items-center justify-between mb-4 bg-white rounded-2xl px-4 py-3 shadow-sm">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors"
-        >
-          ‹
-        </button>
+        <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors">‹</button>
         <h2 className="text-base font-bold text-gray-800">{year}년 {MONTH_NAMES[month]}</h2>
-        <button
-          onClick={() => navigate(1)}
-          disabled={isCurrentMonth}
-          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl disabled:opacity-25 transition-colors"
-        >
-          ›
-        </button>
+        <button onClick={() => navigate(1)} disabled={isCurrentMonth} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl disabled:opacity-25 transition-colors">›</button>
       </div>
 
       {/* Day headers */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_NAMES.map((d, i) => (
-          <div
-            key={d}
-            className={`text-center text-[11px] font-semibold py-1 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}
-          >
-            {d}
-          </div>
+          <div key={d} className={`text-center text-[11px] font-semibold py-1 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{d}</div>
         ))}
       </div>
 
@@ -92,7 +83,6 @@ export default function RageCalendarPage({ data }) {
           const isToday = isCurrentMonth && now.getDate() === day
           const counts  = PARTICIPANTS.map(p => ({ p, count: getDayCount(day, p.name) }))
           const hasAny  = counts.some(c => c.count > 0)
-
           return (
             <div
               key={day}
@@ -102,18 +92,14 @@ export default function RageCalendarPage({ data }) {
                   : 'bg-white border border-gray-100'
               }`}
             >
-              <span className={`text-[11px] font-semibold text-right leading-none mb-1 ${isToday ? 'text-white/70' : 'text-gray-400'}`}>
-                {day}
-              </span>
+              <span className={`text-[11px] font-semibold text-right leading-none mb-1 ${isToday ? 'text-white/70' : 'text-gray-400'}`}>{day}</span>
               {hasAny && (
                 <div className="flex flex-col gap-0.5 mt-auto">
                   {counts.map(({ p, count }) =>
                     count > 0 ? (
                       <div key={p.id} className="flex items-center gap-0.5">
                         <span className="text-[10px] leading-none">😤</span>
-                        <span className={`text-[11px] font-bold tabular-nums ${isToday ? 'text-white' : PERSON_STYLE[p.name]?.text}`}>
-                          {count}
-                        </span>
+                        <span className={`text-[11px] font-bold tabular-nums ${isToday ? 'text-white' : PERSON_STYLE[p.name]?.text}`}>{count}</span>
                       </div>
                     ) : null
                   )}
@@ -141,9 +127,8 @@ export default function RageCalendarPage({ data }) {
       <div className="mt-6">
         <h3 className="text-sm font-bold text-gray-600 mb-3 px-1">
           {year}년 {MONTH_NAMES[month]} 분노 기록
-          {allEntries.length > 0 && (
-            <span className="ml-2 text-[11px] font-normal text-gray-400">{allEntries.length}건</span>
-          )}
+          {allEntries.length > 0 && <span className="ml-2 text-[11px] font-normal text-gray-400">{allEntries.length}건</span>}
+          {adminMode && <span className="ml-2 text-[11px] text-orange-400">✏️ 관리 모드</span>}
         </h3>
 
         {allEntries.length === 0 ? (
@@ -153,14 +138,39 @@ export default function RageCalendarPage({ data }) {
           </div>
         ) : (
           <div className="space-y-2">
-            {allEntries.map((ev, i) => {
-              const IC   = ICON_COMPONENTS[ev.name]
-              const st   = PERSON_STYLE[ev.name]
-              const d    = new Date(ev.ts)
+            {allEntries.map((ev) => {
+              const IC  = ICON_COMPONENTS[ev.name]
+              const st  = PERSON_STYLE[ev.name]
+              const d   = new Date(ev.ts)
               const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
               const timeStr = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+
+              if (editingTs === ev.ts) {
+                return (
+                  <div key={ev.ts} className="bg-white rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      {IC && <IC active={true} size={20} />}
+                      <span className={`text-xs font-bold ${st?.text}`}>{ev.name}</span>
+                      <span className="text-[11px] text-gray-400 tabular-nums">{dateStr} {timeStr}</span>
+                    </div>
+                    <textarea
+                      value={editMemo}
+                      onChange={e => setEditMemo(e.target.value)}
+                      rows={2}
+                      autoFocus
+                      className={`w-full text-sm bg-gray-50 rounded-xl px-3 py-2 border border-gray-200 resize-none focus:outline-none focus:ring-2 ${st?.ring}`}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit(ev.name) } }}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => commitEdit(ev.name)} className={`flex-1 py-1.5 rounded-xl text-xs font-bold ${st?.saveBtn}`}>저장</button>
+                      <button onClick={cancelEdit} className="flex-1 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold">취소</button>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
-                <div key={i} className={`bg-white rounded-2xl px-4 py-3 shadow-sm flex items-start gap-3`}>
+                <div key={ev.ts} className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-start gap-3">
                   <div className="shrink-0 mt-0.5">
                     {IC ? <IC active={true} size={28} /> : <span>😤</span>}
                   </div>
@@ -173,7 +183,26 @@ export default function RageCalendarPage({ data }) {
                       {ev.memo || '메모 없음'}
                     </p>
                   </div>
-                  <span className="text-xl shrink-0 mt-0.5">😤</span>
+                  {adminMode ? (
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => startEdit(ev)}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 text-sm transition-colors"
+                        title="메모 편집"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => onDeleteEntry(ev.name, ev.ts)}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-red-50 text-sm transition-colors"
+                        title="삭제"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xl shrink-0 mt-0.5">😤</span>
+                  )}
                 </div>
               )
             })}

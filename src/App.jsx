@@ -35,6 +35,7 @@ async function pushRemote(data) {
 export default function App() {
   const [page, setPage]           = useState(() => localStorage.getItem(PAGE_KEY) || 'miseon')
   const [mode, setMode]           = useState(() => localStorage.getItem(MODE_KEY) || 'smoke')
+  const [adminMode, setAdminMode] = useState(false)
   const [data, setData]           = useState(loadLocal)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
 
@@ -45,6 +46,7 @@ export default function App() {
 
   const handleModeChange = (m) => {
     setMode(m)
+    setAdminMode(false)
     localStorage.setItem(MODE_KEY, m)
   }
 
@@ -133,6 +135,42 @@ export default function App() {
     })
   }
 
+  function tsToMonthDay(ts) {
+    const d    = new Date(ts)
+    const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const dKey = getDayKey(d)
+    return { mKey, dKey }
+  }
+
+  function editRageMemo(name, ts, newMemo) {
+    const { mKey, dKey } = tsToMonthDay(ts)
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.rageMonths?.[mKey]?.[name]?.[dKey]
+      if (events) {
+        const idx = events.findIndex(e => e.ts === ts)
+        if (idx !== -1) events[idx] = { ...events[idx], memo: newMemo }
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function deleteRageEntry(name, ts) {
+    const { mKey, dKey } = tsToMonthDay(ts)
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.rageMonths?.[mKey]?.[name]?.[dKey]
+      if (events) {
+        next.rageMonths[mKey][name][dKey] = events.filter(e => e.ts !== ts)
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
   const activePerson = PARTICIPANTS.find(p => p.id === page)
 
@@ -143,13 +181,20 @@ export default function App() {
         onSettings={() => setShowBudgetModal(true)}
         mode={mode}
         onModeChange={handleModeChange}
+        adminMode={adminMode}
+        onAdminToggle={() => setAdminMode(a => !a)}
       />
 
       <main className="max-w-lg mx-auto px-4 py-5">
         {page === 'calendar' ? (
           mode === 'smoke'
             ? <CalendarPage data={data} />
-            : <RageCalendarPage data={data} />
+            : <RageCalendarPage
+                data={data}
+                adminMode={adminMode}
+                onEditMemo={editRageMemo}
+                onDeleteEntry={deleteRageEntry}
+              />
         ) : activePerson ? (
           mode === 'smoke' ? (
             <ParticipantCard
@@ -171,6 +216,9 @@ export default function App() {
               lastRage={lastRage[activePerson.name] || null}
               onAdd={(memo) => addRage(activePerson.name, memo)}
               onRemove={() => removeRage(activePerson.name)}
+              adminMode={adminMode}
+              onEditMemo={(ts, newMemo) => editRageMemo(activePerson.name, ts, newMemo)}
+              onDeleteEntry={(ts) => deleteRageEntry(activePerson.name, ts)}
             />
           )
         ) : null}

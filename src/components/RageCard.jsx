@@ -19,7 +19,6 @@ const THEMES = {
     memoText:     'text-red-800',
     ring:         'focus:ring-red-300',
     saveBtn:      'bg-red-500 hover:bg-red-600 text-white',
-    badge:        'bg-white/20 text-white',
   },
   '진욱': {
     header:       'from-amber-500 to-orange-600',
@@ -32,7 +31,6 @@ const THEMES = {
     memoText:     'text-orange-800',
     ring:         'focus:ring-orange-300',
     saveBtn:      'bg-orange-500 hover:bg-orange-600 text-white',
-    badge:        'bg-white/20 text-white',
   },
 }
 
@@ -50,12 +48,18 @@ function formatElapsed(ms) {
   return `${min}분 ${sec}초`
 }
 
-export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove }) {
-  const [elapsed, setElapsed] = useState(
+export default function RageCard({
+  name, todayEvents, lastRage,
+  onAdd, onRemove,
+  adminMode, onEditMemo, onDeleteEntry,
+}) {
+  const [elapsed, setElapsed]   = useState(
     lastRage ? Date.now() - new Date(lastRage).getTime() : null
   )
   const [showInput, setShowInput] = useState(false)
   const [memo, setMemo]           = useState('')
+  const [editingTs, setEditingTs] = useState(null)
+  const [editMemo, setEditMemo]   = useState('')
 
   useEffect(() => {
     if (!lastRage) { setElapsed(null); return }
@@ -63,6 +67,9 @@ export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove 
     const id = setInterval(() => setElapsed(Date.now() - new Date(lastRage).getTime()), 1000)
     return () => clearInterval(id)
   }, [lastRage])
+
+  // Cancel any open edit when admin mode turns off
+  useEffect(() => { if (!adminMode) setEditingTs(null) }, [adminMode])
 
   const t             = THEMES[name] || THEMES['진욱']
   const IconComponent = ICON_COMPONENTS[name]
@@ -73,10 +80,17 @@ export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove 
     setShowInput(false)
   }
 
-  function handleCancel() {
-    setMemo('')
-    setShowInput(false)
+  function startEdit(ev) {
+    setEditingTs(ev.ts)
+    setEditMemo(ev.memo)
   }
+
+  function commitEdit() {
+    onEditMemo(editingTs, editMemo.trim())
+    setEditingTs(null)
+  }
+
+  function cancelEdit() { setEditingTs(null) }
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg ${t.shadow} overflow-hidden`}>
@@ -126,7 +140,7 @@ export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove 
           </button>
         </div>
 
-        {/* Memo input sheet */}
+        {/* New memo input sheet */}
         {showInput && (
           <div className={`rounded-2xl p-4 ${t.memo}`}>
             <p className={`text-[11px] font-semibold mb-2 ${t.elapsedLabel}`}>메모 (선택)</p>
@@ -140,18 +154,8 @@ export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove 
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() } }}
             />
             <div className="flex gap-2 mt-2.5">
-              <button
-                onClick={handleSave}
-                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-sm ${t.saveBtn}`}
-              >
-                기록
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex-1 py-2 rounded-xl bg-white text-gray-500 text-sm font-bold border border-gray-200"
-              >
-                취소
-              </button>
+              <button onClick={handleSave} className={`flex-1 py-2 rounded-xl text-sm font-bold active:scale-95 shadow-sm ${t.saveBtn}`}>기록</button>
+              <button onClick={() => { setMemo(''); setShowInput(false) }} className="flex-1 py-2 rounded-xl bg-white text-gray-500 text-sm font-bold border border-gray-200">취소</button>
             </div>
           </div>
         )}
@@ -159,15 +163,57 @@ export default function RageCard({ name, todayEvents, lastRage, onAdd, onRemove 
         {/* Today's event log */}
         {todayEvents.length > 0 && (
           <div className="space-y-2">
-            <p className={`text-[11px] font-semibold ${t.elapsedLabel}`}>오늘의 기록</p>
-            {[...todayEvents].reverse().map((ev, i) => (
-              <div key={i} className={`rounded-xl px-3 py-2 flex items-start gap-2 ${t.memo}`}>
-                <span className={`text-[10px] tabular-nums shrink-0 mt-0.5 ${t.memoTime}`}>
-                  {new Date(ev.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className={`text-sm ${t.memoText}`}>
-                  {ev.memo || <span className="opacity-40 italic">메모 없음</span>}
-                </span>
+            <p className={`text-[11px] font-semibold ${t.elapsedLabel}`}>
+              오늘의 기록
+              {adminMode && <span className="ml-1.5 text-orange-400">✏️ 관리 모드</span>}
+            </p>
+            {[...todayEvents].reverse().map((ev) => (
+              <div key={ev.ts}>
+                {editingTs === ev.ts ? (
+                  /* Inline edit */
+                  <div className={`rounded-xl p-3 ${t.memo}`}>
+                    <textarea
+                      value={editMemo}
+                      onChange={e => setEditMemo(e.target.value)}
+                      rows={2}
+                      autoFocus
+                      className={`w-full text-sm bg-white rounded-xl px-3 py-2 border border-gray-200 resize-none focus:outline-none focus:ring-2 ${t.ring}`}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit() } }}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={commitEdit} className={`flex-1 py-1.5 rounded-xl text-xs font-bold ${t.saveBtn}`}>저장</button>
+                      <button onClick={cancelEdit} className="flex-1 py-1.5 rounded-xl bg-white text-gray-500 text-xs font-bold border border-gray-200">취소</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Normal row — edit/delete visible in admin mode */
+                  <div className={`rounded-xl px-3 py-2 flex items-start gap-2 ${t.memo}`}>
+                    <span className={`text-[10px] tabular-nums shrink-0 mt-0.5 ${t.memoTime}`}>
+                      {new Date(ev.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className={`text-sm flex-1 min-w-0 ${t.memoText}`}>
+                      {ev.memo || <span className="opacity-40 italic">메모 없음</span>}
+                    </span>
+                    {adminMode && (
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() => startEdit(ev)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/70 hover:bg-white text-sm transition-colors"
+                          title="메모 편집"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => onDeleteEntry(ev.ts)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/70 hover:bg-red-50 text-sm transition-colors"
+                          title="삭제"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
