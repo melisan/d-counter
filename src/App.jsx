@@ -16,6 +16,10 @@ function getMonthKey(d) {
 function getDayKey(d) {
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
 }
+function tsToMonthDay(ts) {
+  const d = new Date(ts)
+  return { mKey: getMonthKey(d), dKey: getDayKey(d) }
+}
 function loadLocal() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {} } catch { return {} }
 }
