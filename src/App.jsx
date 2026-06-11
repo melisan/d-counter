@@ -5,6 +5,8 @@ import ParticipantCard from './components/ParticipantCard'
 import CalendarPage from './components/CalendarPage'
 import RageCard from './components/RageCard'
 import RageCalendarPage from './components/RageCalendarPage'
+import GraceCard from './components/GraceCard'
+import GraceCalendarPage from './components/GraceCalendarPage'
 import BudgetModal from './components/BudgetModal'
 import { PARTICIPANTS, DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, MODE_KEY, POLL_MS } from './constants'
 
@@ -171,6 +173,71 @@ export default function App() {
     })
   }
 
+  // ── Grace ───────────────────────────────────────────────────────────────────
+  const lastGrace = data.lastGrace || {}
+
+  function getGraceTodayEvents(name) {
+    return data.graceMonths?.[monthKey]?.[name]?.[today] ?? []
+  }
+
+  function addGrace(name, memo) {
+    setData(prev => {
+      const next = structuredClone(prev)
+      next.graceMonths ??= {}
+      next.graceMonths[monthKey] ??= {}
+      next.graceMonths[monthKey][name] ??= {}
+      next.graceMonths[monthKey][name][today] ??= []
+      next.graceMonths[monthKey][name][today].push({ ts: new Date().toISOString(), memo })
+      next.lastGrace ??= {}
+      next.lastGrace[name] = new Date().toISOString()
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function removeGrace(name) {
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.graceMonths?.[monthKey]?.[name]?.[today]
+      if (events?.length > 0) {
+        next.graceMonths[monthKey][name][today] = events.slice(0, -1)
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function editGraceMemo(name, ts, newMemo) {
+    const { mKey, dKey } = tsToMonthDay(ts)
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.graceMonths?.[mKey]?.[name]?.[dKey]
+      if (events) {
+        const idx = events.findIndex(e => e.ts === ts)
+        if (idx !== -1) events[idx] = { ...events[idx], memo: newMemo }
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function deleteGraceEntry(name, ts) {
+    const { mKey, dKey } = tsToMonthDay(ts)
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.graceMonths?.[mKey]?.[name]?.[dKey]
+      if (events) {
+        next.graceMonths[mKey][name][dKey] = events.filter(e => e.ts !== ts)
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
   const activePerson = PARTICIPANTS.find(p => p.id === page)
 
@@ -189,12 +256,19 @@ export default function App() {
         {page === 'calendar' ? (
           mode === 'smoke'
             ? <CalendarPage data={data} />
-            : <RageCalendarPage
-                data={data}
-                adminMode={adminMode}
-                onEditMemo={editRageMemo}
-                onDeleteEntry={deleteRageEntry}
-              />
+            : mode === 'rage'
+              ? <RageCalendarPage
+                  data={data}
+                  adminMode={adminMode}
+                  onEditMemo={editRageMemo}
+                  onDeleteEntry={deleteRageEntry}
+                />
+              : <GraceCalendarPage
+                  data={data}
+                  adminMode={adminMode}
+                  onEditMemo={editGraceMemo}
+                  onDeleteEntry={deleteGraceEntry}
+                />
         ) : activePerson ? (
           mode === 'smoke' ? (
             <ParticipantCard
@@ -208,7 +282,7 @@ export default function App() {
               onIncrement={() => updateCount(activePerson.name, 1)}
               onDecrement={() => updateCount(activePerson.name, -1)}
             />
-          ) : (
+          ) : mode === 'rage' ? (
             <RageCard
               key={activePerson.id + '-rage'}
               name={activePerson.name}
@@ -219,6 +293,18 @@ export default function App() {
               adminMode={adminMode}
               onEditMemo={(ts, newMemo) => editRageMemo(activePerson.name, ts, newMemo)}
               onDeleteEntry={(ts) => deleteRageEntry(activePerson.name, ts)}
+            />
+          ) : (
+            <GraceCard
+              key={activePerson.id + '-grace'}
+              name={activePerson.name}
+              todayEvents={getGraceTodayEvents(activePerson.name)}
+              lastGrace={lastGrace[activePerson.name] || null}
+              onAdd={(memo) => addGrace(activePerson.name, memo)}
+              onRemove={() => removeGrace(activePerson.name)}
+              adminMode={adminMode}
+              onEditMemo={(ts, newMemo) => editGraceMemo(activePerson.name, ts, newMemo)}
+              onDeleteEntry={(ts) => deleteGraceEntry(activePerson.name, ts)}
             />
           )
         ) : null}
