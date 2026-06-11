@@ -3,8 +3,10 @@ import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import ParticipantCard from './components/ParticipantCard'
 import CalendarPage from './components/CalendarPage'
+import RageCard from './components/RageCard'
+import RageCalendarPage from './components/RageCalendarPage'
 import BudgetModal from './components/BudgetModal'
-import { PARTICIPANTS, DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, POLL_MS } from './constants'
+import { PARTICIPANTS, DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, MODE_KEY, POLL_MS } from './constants'
 
 function getMonthKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -31,13 +33,19 @@ async function pushRemote(data) {
 }
 
 export default function App() {
-  const [page, setPage] = useState(() => localStorage.getItem(PAGE_KEY) || 'miseon')
-  const [data, setData] = useState(loadLocal)
+  const [page, setPage]           = useState(() => localStorage.getItem(PAGE_KEY) || 'miseon')
+  const [mode, setMode]           = useState(() => localStorage.getItem(MODE_KEY) || 'smoke')
+  const [data, setData]           = useState(loadLocal)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
 
   const handlePageChange = (p) => {
     setPage(p)
     localStorage.setItem(PAGE_KEY, p)
+  }
+
+  const handleModeChange = (m) => {
+    setMode(m)
+    localStorage.setItem(MODE_KEY, m)
   }
 
   const sync = useCallback((remote) => {
@@ -57,6 +65,7 @@ export default function App() {
   const today    = getDayKey(now)
   const monthKey = getMonthKey(now)
 
+  // ── Cigarette ───────────────────────────────────────────────────────────────
   const budgets    = data.budgets    || Object.fromEntries(PARTICIPANTS.map(p => [p.name, DEFAULT_BUDGET]))
   const monthDays  = data.months?.[monthKey] || {}
   const lastSmoked = data.lastSmoked || {}
@@ -88,27 +97,82 @@ export default function App() {
     })
   }
 
+  // ── Rage ────────────────────────────────────────────────────────────────────
+  const lastRage = data.lastRage || {}
+
+  function getRageTodayEvents(name) {
+    return data.rageMonths?.[monthKey]?.[name]?.[today] ?? []
+  }
+
+  function addRage(name, memo) {
+    setData(prev => {
+      const next = structuredClone(prev)
+      next.rageMonths ??= {}
+      next.rageMonths[monthKey] ??= {}
+      next.rageMonths[monthKey][name] ??= {}
+      next.rageMonths[monthKey][name][today] ??= []
+      next.rageMonths[monthKey][name][today].push({ ts: new Date().toISOString(), memo })
+      next.lastRage ??= {}
+      next.lastRage[name] = new Date().toISOString()
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function removeRage(name) {
+    setData(prev => {
+      const next   = structuredClone(prev)
+      const events = next.rageMonths?.[monthKey]?.[name]?.[today]
+      if (events?.length > 0) {
+        next.rageMonths[monthKey][name][today] = events.slice(0, -1)
+      }
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   const activePerson = PARTICIPANTS.find(p => p.id === page)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50 to-blue-50 pb-20">
-      <Header today={now} onSettings={() => setShowBudgetModal(true)} />
+      <Header
+        today={now}
+        onSettings={() => setShowBudgetModal(true)}
+        mode={mode}
+        onModeChange={handleModeChange}
+      />
 
       <main className="max-w-lg mx-auto px-4 py-5">
         {page === 'calendar' ? (
-          <CalendarPage data={data} />
+          mode === 'smoke'
+            ? <CalendarPage data={data} />
+            : <RageCalendarPage data={data} />
         ) : activePerson ? (
-          <ParticipantCard
-            key={activePerson.id}
-            name={activePerson.name}
-            icon={activePerson.icon}
-            todayCount={getTodayCount(activePerson.name)}
-            monthTotal={getMonthTotal(activePerson.name)}
-            budget={budgets[activePerson.name] ?? DEFAULT_BUDGET}
-            lastSmoked={lastSmoked[activePerson.name] || null}
-            onIncrement={() => updateCount(activePerson.name, 1)}
-            onDecrement={() => updateCount(activePerson.name, -1)}
-          />
+          mode === 'smoke' ? (
+            <ParticipantCard
+              key={activePerson.id}
+              name={activePerson.name}
+              icon={activePerson.icon}
+              todayCount={getTodayCount(activePerson.name)}
+              monthTotal={getMonthTotal(activePerson.name)}
+              budget={budgets[activePerson.name] ?? DEFAULT_BUDGET}
+              lastSmoked={lastSmoked[activePerson.name] || null}
+              onIncrement={() => updateCount(activePerson.name, 1)}
+              onDecrement={() => updateCount(activePerson.name, -1)}
+            />
+          ) : (
+            <RageCard
+              key={activePerson.id + '-rage'}
+              name={activePerson.name}
+              todayEvents={getRageTodayEvents(activePerson.name)}
+              lastRage={lastRage[activePerson.name] || null}
+              onAdd={(memo) => addRage(activePerson.name, memo)}
+              onRemove={() => removeRage(activePerson.name)}
+            />
+          )
         ) : null}
       </main>
 
