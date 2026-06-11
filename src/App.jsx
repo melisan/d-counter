@@ -7,8 +7,10 @@ import RageCard from './components/RageCard'
 import RageCalendarPage from './components/RageCalendarPage'
 import GraceCard from './components/GraceCard'
 import GraceCalendarPage from './components/GraceCalendarPage'
+import SnackCard from './components/SnackCard'
+import SnackCalendarPage from './components/SnackCalendarPage'
 import BudgetModal from './components/BudgetModal'
-import { PARTICIPANTS, DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, MODE_KEY, POLL_MS } from './constants'
+import { PARTICIPANTS, DEFAULT_BUDGET, SNACK_DEFAULT_BUDGET, STORAGE_KEY, PAGE_KEY, MODE_KEY, POLL_MS } from './constants'
 
 function getMonthKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -166,6 +168,39 @@ export default function App() {
     })
   }
 
+  // ── Snack ───────────────────────────────────────────────────────────────────
+  const snackBudgets   = data.snackBudgets || Object.fromEntries(PARTICIPANTS.map(p => [p.name, SNACK_DEFAULT_BUDGET]))
+  const snackMonthDays = data.snackMonths?.[monthKey] || {}
+
+  function getSnackTodayCount(name) { return snackMonthDays[name]?.[today] ?? 0 }
+  function getTodayWeight(name)     { return data.weights?.[name]?.[today] ?? null }
+
+  function updateSnackCount(name, delta) {
+    setData(prev => {
+      const next = structuredClone(prev)
+      next.snackMonths ??= {}
+      next.snackMonths[monthKey] ??= {}
+      next.snackMonths[monthKey][name] ??= {}
+      const cur = next.snackMonths[monthKey][name][today] ?? 0
+      next.snackMonths[monthKey][name][today] = Math.max(0, cur + delta)
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
+  function logWeight(name, kg) {
+    setData(prev => {
+      const next = structuredClone(prev)
+      next.weights ??= {}
+      next.weights[name] ??= {}
+      next.weights[name][today] = kg
+      saveLocal(next)
+      pushRemote(next).catch(() => {})
+      return next
+    })
+  }
+
   // ── Grace ───────────────────────────────────────────────────────────────────
   const lastGrace = data.lastGrace || {}
 
@@ -255,7 +290,9 @@ export default function App() {
                   onEditSection={editRageSection}
                   onDeleteEntry={deleteRageEntry}
                 />
-              : <GraceCalendarPage
+              : mode === 'snack'
+                ? <SnackCalendarPage data={data} />
+                : <GraceCalendarPage
                   data={data}
                   adminMode={adminMode}
                   onEditMemo={editGraceMemo}
@@ -283,6 +320,17 @@ export default function App() {
               onAdd={(sections) => addRage(activePerson.name, sections)}
               onDeleteEntry={(ts) => deleteRageEntry(activePerson.name, ts)}
               onEditSection={(entryTs, key, text) => editRageSection(activePerson.name, entryTs, key, text)}
+            />
+          ) : mode === 'snack' ? (
+            <SnackCard
+              key={activePerson.id + '-snack'}
+              name={activePerson.name}
+              todayCount={getSnackTodayCount(activePerson.name)}
+              budget={snackBudgets[activePerson.name] ?? SNACK_DEFAULT_BUDGET}
+              todayWeight={getTodayWeight(activePerson.name)}
+              onIncrement={() => updateSnackCount(activePerson.name, 1)}
+              onDecrement={() => updateSnackCount(activePerson.name, -1)}
+              onLogWeight={(kg) => logWeight(activePerson.name, kg)}
             />
           ) : (
             <GraceCard

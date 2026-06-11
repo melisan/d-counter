@@ -37,7 +37,7 @@ export default function Header({ today, onSettings, mode, onModeChange, adminMod
           </div>
         </div>
 
-        {/* Mode toggle — 3 options */}
+        {/* Mode toggle — 4 options */}
         <div className="flex gap-1 bg-white/10 rounded-xl p-1">
           <button
             onClick={() => onModeChange('smoke')}
@@ -45,7 +45,7 @@ export default function Header({ today, onSettings, mode, onModeChange, adminMod
               mode === 'smoke' ? 'bg-white text-violet-700 shadow-sm' : 'text-white/60 hover:text-white'
             }`}
           >
-            🚬 담배
+            D
           </button>
           <button
             onClick={() => onModeChange('rage')}
@@ -62,6 +62,14 @@ export default function Header({ today, onSettings, mode, onModeChange, adminMod
             }`}
           >
             🙏 감사
+          </button>
+          <button
+            onClick={() => onModeChange('snack')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              mode === 'snack' ? 'bg-white text-emerald-600 shadow-sm' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            🍿 간식
           </button>
         </div>
       </div>
