@@ -43,7 +43,6 @@ async function pushRemote(data) {
 export default function App() {
   const [page, setPage]           = useState(() => localStorage.getItem(PAGE_KEY) || 'miseon')
   const [mode, setMode]           = useState(() => localStorage.getItem(MODE_KEY) || 'smoke')
-  const [adminMode, setAdminMode] = useState(false)
   const [data, setData]           = useState(loadLocal)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
 
@@ -54,7 +53,6 @@ export default function App() {
 
   const handleModeChange = (m) => {
     setMode(m)
-    setAdminMode(false)
     localStorage.setItem(MODE_KEY, m)
   }
 
@@ -208,43 +206,39 @@ export default function App() {
     return data.graceMonths?.[monthKey]?.[name]?.[today] ?? []
   }
 
-  function addGrace(name, memo) {
+  function addGrace(name, sections) {
+    const ts    = new Date().toISOString()
+    const entry = { ts }
+    Object.keys(sections).forEach(key => {
+      entry[key] = sections[key]?.trim() ? { text: sections[key].trim(), ts } : null
+    })
     setData(prev => {
       const next = structuredClone(prev)
       next.graceMonths ??= {}
       next.graceMonths[monthKey] ??= {}
       next.graceMonths[monthKey][name] ??= {}
       next.graceMonths[monthKey][name][today] ??= []
-      next.graceMonths[monthKey][name][today].push({ ts: new Date().toISOString(), memo })
+      next.graceMonths[monthKey][name][today].push(entry)
       next.lastGrace ??= {}
-      next.lastGrace[name] = new Date().toISOString()
+      next.lastGrace[name] = ts
       saveLocal(next)
       pushRemote(next).catch(() => {})
       return next
     })
   }
 
-  function removeGrace(name) {
-    setData(prev => {
-      const next   = structuredClone(prev)
-      const events = next.graceMonths?.[monthKey]?.[name]?.[today]
-      if (events?.length > 0) {
-        next.graceMonths[monthKey][name][today] = events.slice(0, -1)
-      }
-      saveLocal(next)
-      pushRemote(next).catch(() => {})
-      return next
-    })
-  }
-
-  function editGraceMemo(name, ts, newMemo) {
-    const { mKey, dKey } = tsToMonthDay(ts)
+  function editGraceSection(name, entryTs, sectionKey, newText) {
+    const { mKey, dKey } = tsToMonthDay(entryTs)
     setData(prev => {
       const next   = structuredClone(prev)
       const events = next.graceMonths?.[mKey]?.[name]?.[dKey]
       if (events) {
-        const idx = events.findIndex(e => e.ts === ts)
-        if (idx !== -1) events[idx] = { ...events[idx], memo: newMemo }
+        const idx = events.findIndex(e => e.ts === entryTs)
+        if (idx !== -1) {
+          events[idx][sectionKey] = newText
+            ? { text: newText, ts: new Date().toISOString() }
+            : null
+        }
       }
       saveLocal(next)
       pushRemote(next).catch(() => {})
@@ -276,8 +270,6 @@ export default function App() {
         onSettings={() => setShowBudgetModal(true)}
         mode={mode}
         onModeChange={handleModeChange}
-        adminMode={adminMode}
-        onAdminToggle={() => setAdminMode(a => !a)}
       />
 
       <main className="max-w-lg mx-auto px-4 py-5">
@@ -294,8 +286,7 @@ export default function App() {
                 ? <SnackCalendarPage data={data} />
                 : <GraceCalendarPage
                   data={data}
-                  adminMode={adminMode}
-                  onEditMemo={editGraceMemo}
+                  onEditSection={editGraceSection}
                   onDeleteEntry={deleteGraceEntry}
                 />
         ) : activePerson ? (
@@ -338,11 +329,9 @@ export default function App() {
               name={activePerson.name}
               todayEvents={getGraceTodayEvents(activePerson.name)}
               lastGrace={lastGrace[activePerson.name] || null}
-              onAdd={(memo) => addGrace(activePerson.name, memo)}
-              onRemove={() => removeGrace(activePerson.name)}
-              adminMode={adminMode}
-              onEditMemo={(ts, newMemo) => editGraceMemo(activePerson.name, ts, newMemo)}
+              onAdd={(sections) => addGrace(activePerson.name, sections)}
               onDeleteEntry={(ts) => deleteGraceEntry(activePerson.name, ts)}
+              onEditSection={(entryTs, key, text) => editGraceSection(activePerson.name, entryTs, key, text)}
             />
           )
         ) : null}
