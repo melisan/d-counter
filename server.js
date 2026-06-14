@@ -8,11 +8,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3000
 const dist = join(__dirname, 'dist')
 
-// --- Database setup ---
+// --- Express app ---
+const app = express()
+app.use(express.json({ limit: '1mb' }))
+
+// --- Database (initialised after server starts so Railway health check passes) ---
 let pool = null
-if (process.env.DATABASE_URL) {
-  pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+
+async function initDb() {
+  if (!process.env.DATABASE_URL) {
+    console.warn('No DATABASE_URL — data will not sync across devices')
+    return
+  }
   try {
+    pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
     await pool.query(`
       CREATE TABLE IF NOT EXISTS app_state (
         id INT PRIMARY KEY DEFAULT 1,
@@ -25,13 +34,7 @@ if (process.env.DATABASE_URL) {
     console.error('DB init error:', e.message)
     pool = null
   }
-} else {
-  console.warn('No DATABASE_URL — data will not sync across devices')
 }
-
-// --- Express app ---
-const app = express()
-app.use(express.json({ limit: '1mb' }))
 
 app.get('/api/data', async (_req, res) => {
   if (!pool) return res.json({})
@@ -68,4 +71,8 @@ app.get('*', (_req, res) => {
 process.on('uncaughtException', err => { console.error('uncaughtException', err); process.exit(1) })
 process.on('unhandledRejection', err => { console.error('unhandledRejection', err); process.exit(1) })
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Listening on 0.0.0.0:${PORT}`))
+// Listen first, then connect to DB — prevents Railway health-check timeout
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Listening on 0.0.0.0:${PORT}`)
+  initDb()
+})
