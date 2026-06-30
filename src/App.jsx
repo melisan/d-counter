@@ -45,6 +45,24 @@ export default function App() {
   const [mode, setMode]           = useState(() => localStorage.getItem(MODE_KEY) || 'smoke')
   const [data, setData]           = useState(loadLocal)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
+  const [config, setConfig]       = useState(null)
+
+  useEffect(() => {
+    fetch('/api/config').then(r => r.json()).then(setConfig).catch(() => {})
+  }, [])
+
+  const activeParticipants = config?.participant
+    ? PARTICIPANTS.filter(p => p.id === config.participant)
+    : PARTICIPANTS
+
+  useEffect(() => {
+    if (!config?.participant) return
+    const valid = [config.participant, 'calendar']
+    if (!valid.includes(page)) {
+      setPage(config.participant)
+      localStorage.setItem(PAGE_KEY, config.participant)
+    }
+  }, [config])
 
   const handlePageChange = (p) => {
     setPage(p)
@@ -74,7 +92,7 @@ export default function App() {
   const monthKey = getMonthKey(now)
 
   // ── Cigarette ───────────────────────────────────────────────────────────────
-  const budgets    = data.budgets    || Object.fromEntries(PARTICIPANTS.map(p => [p.name, DEFAULT_BUDGET]))
+  const budgets    = data.budgets    || Object.fromEntries(activeParticipants.map(p => [p.name, DEFAULT_BUDGET]))
   const monthDays  = data.months?.[monthKey] || {}
   const lastSmoked = data.lastSmoked || {}
 
@@ -167,7 +185,7 @@ export default function App() {
   }
 
   // ── Snack ───────────────────────────────────────────────────────────────────
-  const snackBudgets   = data.snackBudgets || Object.fromEntries(PARTICIPANTS.map(p => [p.name, SNACK_DEFAULT_BUDGET]))
+  const snackBudgets   = data.snackBudgets || Object.fromEntries(activeParticipants.map(p => [p.name, SNACK_DEFAULT_BUDGET]))
   const snackMonthDays = data.snackMonths?.[monthKey] || {}
 
   function getSnackTodayCount(name) { return snackMonthDays[name]?.[today] ?? 0 }
@@ -261,7 +279,7 @@ export default function App() {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  const activePerson = PARTICIPANTS.find(p => p.id === page)
+  const activePerson = activeParticipants.find(p => p.id === page)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50 to-blue-50 pb-20">
@@ -275,17 +293,19 @@ export default function App() {
       <main className="max-w-lg mx-auto px-4 py-5">
         {page === 'calendar' ? (
           mode === 'smoke'
-            ? <CalendarPage data={data} />
+            ? <CalendarPage data={data} participants={activeParticipants} />
             : mode === 'rage'
               ? <RageCalendarPage
                   data={data}
+                  participants={activeParticipants}
                   onEditSection={editRageSection}
                   onDeleteEntry={deleteRageEntry}
                 />
               : mode === 'snack'
-                ? <SnackCalendarPage data={data} />
+                ? <SnackCalendarPage data={data} participants={activeParticipants} />
                 : <GraceCalendarPage
                   data={data}
+                  participants={activeParticipants}
                   onEditSection={editGraceSection}
                   onDeleteEntry={deleteGraceEntry}
                 />
@@ -337,12 +357,12 @@ export default function App() {
         ) : null}
       </main>
 
-      <BottomNav active={page} onChange={handlePageChange} />
+      <BottomNav active={page} onChange={handlePageChange} participants={activeParticipants} />
 
       {showBudgetModal && (
         <BudgetModal
           budgets={budgets}
-          participants={PARTICIPANTS}
+          participants={activeParticipants}
           onSave={saveBudgets}
           onClose={() => setShowBudgetModal(false)}
         />

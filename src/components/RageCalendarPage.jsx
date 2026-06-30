@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { PARTICIPANTS } from '../constants'
 import MiseonIcon from './icons/MiseonIcon'
 import JinwookIcon from './icons/JinwookIcon'
 import { RAGE_SECTIONS } from './RageCard'
@@ -25,7 +24,7 @@ function getSection(ev, key) {
   return null
 }
 
-export default function RageCalendarPage({ data, onEditSection, onDeleteEntry }) {
+export default function RageCalendarPage({ data, participants, onEditSection, onDeleteEntry }) {
   const now = new Date()
   const [viewDate, setViewDate]   = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const [editState, setEditState] = useState(null) // { name, entryTs, key, text }
@@ -58,7 +57,7 @@ export default function RageCalendarPage({ data, onEditSection, onDeleteEntry })
   while (cells.length % 7 !== 0) cells.push(null)
 
   const allEntries = []
-  PARTICIPANTS.forEach(p => {
+  participants.forEach(p => {
     const personDays = monthRage[p.name] || {}
     Object.entries(personDays).forEach(([, events]) => {
       events.forEach(ev => allEntries.push({ ...ev, name: p.name }))
@@ -87,7 +86,7 @@ export default function RageCalendarPage({ data, onEditSection, onDeleteEntry })
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
           const isToday = isCurrentMonth && now.getDate() === day
-          const counts  = PARTICIPANTS.map(p => ({ p, count: getDayCount(day, p.name) }))
+          const counts  = participants.map(p => ({ p, count: getDayCount(day, p.name) }))
           const hasAny  = counts.some(c => c.count > 0)
           return (
             <div key={day} className={`rounded-xl p-1.5 min-h-[52px] flex flex-col shadow-sm ${isToday ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-orange-200' : 'bg-white border border-gray-100'}`}>
@@ -109,7 +108,7 @@ export default function RageCalendarPage({ data, onEditSection, onDeleteEntry })
 
       {/* Legend */}
       <div className="flex gap-4 justify-center mt-4">
-        {PARTICIPANTS.map(p => {
+        {participants.map(p => {
           const IC = ICON_COMPONENTS[p.name]
           return (
             <div key={p.id} className="flex items-center gap-1.5 text-xs text-gray-500">

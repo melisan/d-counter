@@ -58,6 +58,10 @@ app.post('/api/data', async (req, res) => {
   }
 })
 
+app.get('/api/config', (_req, res) => {
+  res.json({ participant: process.env.PARTICIPANT || null })
+})
+
 app.get('/health', (_req, res) => res.json({ ok: true, db: !!pool }))
 
 // Static SPA
