@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { PARTICIPANTS } from '../constants'
 
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const DAY_NAMES   = ['일','월','화','수','목','금','토']
@@ -11,7 +10,7 @@ const PERSON_STYLE = {
 
 function pad(n) { return String(n).padStart(2, '0') }
 
-export default function CalendarPage({ data }) {
+export default function CalendarPage({ data, participants }) {
   const now = new Date()
   const [viewDate, setViewDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
 
@@ -75,7 +74,7 @@ export default function CalendarPage({ data }) {
           if (!day) return <div key={`e-${i}`} />
 
           const isToday = isCurrentMonth && now.getDate() === day
-          const counts  = PARTICIPANTS.map(p => ({ p, count: getCount(day, p.name) }))
+          const counts  = participants.map(p => ({ p, count: getCount(day, p.name) }))
           const hasAny  = counts.some(c => c.count > 0)
 
           return (
@@ -113,7 +112,7 @@ export default function CalendarPage({ data }) {
 
       {/* Legend */}
       <div className="flex gap-4 justify-center mt-4">
-        {PARTICIPANTS.map(p => (
+        {participants.map(p => (
           <div key={p.id} className="flex items-center gap-1.5 text-xs text-gray-500">
             <span>{p.icon}</span>
             <span>{p.name}</span>

@@ -1,4 +1,3 @@
-import { PARTICIPANTS } from '../constants'
 import MiseonIcon from './icons/MiseonIcon'
 import JinwookIcon from './icons/JinwookIcon'
 
@@ -6,11 +5,6 @@ const ICON_COMPONENTS = {
   miseon:  MiseonIcon,
   jinwook: JinwookIcon,
 }
-
-const TABS = [
-  ...PARTICIPANTS.map(p => ({ id: p.id, label: p.name })),
-  { id: 'calendar', label: '달력' },
-]
 
 const ACTIVE = {
   miseon:   'text-rose-500',
@@ -24,7 +18,12 @@ const INDICATOR = {
   calendar: 'bg-violet-500',
 }
 
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, participants }) {
+  const TABS = [
+    ...participants.map(p => ({ id: p.id, label: p.name })),
+    { id: 'calendar', label: '달력' },
+  ]
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
       <div className="max-w-lg mx-auto flex">

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { PARTICIPANTS } from '../constants'
 import MiseonIcon from './icons/MiseonIcon'
 import JinwookIcon from './icons/JinwookIcon'
 
@@ -16,8 +15,8 @@ const ICON_COMPONENTS = { '미선': MiseonIcon, '진욱': JinwookIcon }
 function pad(n) { return String(n).padStart(2, '0') }
 
 // ── Weight line graph ────────────────────────────────────────────────────────
-function WeightGraph({ year, month, daysInMonth, weights }) {
-  const series = PARTICIPANTS.map(p => {
+function WeightGraph({ year, month, daysInMonth, weights, participants }) {
+  const series = participants.map(p => {
     const pts = []
     for (let d = 1; d <= daysInMonth; d++) {
       const w = weights[p.name]?.[`${year}-${pad(month + 1)}-${pad(d)}`]
@@ -129,7 +128,7 @@ function WeightGraph({ year, month, daysInMonth, weights }) {
 }
 
 // ── Main page ────────────────────────────────────────────────────────────────
-export default function SnackCalendarPage({ data }) {
+export default function SnackCalendarPage({ data, participants }) {
   const now = new Date()
   const [viewDate, setViewDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
 
@@ -159,7 +158,7 @@ export default function SnackCalendarPage({ data }) {
   const dayEntries = []
   for (let d = daysInMonth; d >= 1; d--) {
     const dKey   = `${year}-${pad(month + 1)}-${pad(d)}`
-    const counts = PARTICIPANTS.map(p => ({
+    const counts = participants.map(p => ({
       name: p.name, count: getCount(d, p.name), weight: getWeight(p.name, dKey),
     }))
     if (counts.some(c => c.count > 0 || c.weight != null)) {
@@ -188,7 +187,7 @@ export default function SnackCalendarPage({ data }) {
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} />
           const isToday = isCurrentMonth && now.getDate() === day
-          const counts  = PARTICIPANTS.map(p => ({ p, count: getCount(day, p.name) }))
+          const counts  = participants.map(p => ({ p, count: getCount(day, p.name) }))
           const hasAny  = counts.some(c => c.count > 0)
           return (
             <div key={day} className={`rounded-xl p-1.5 min-h-[52px] flex flex-col shadow-sm ${isToday ? 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-200' : 'bg-white border border-gray-100'}`}>
@@ -210,7 +209,7 @@ export default function SnackCalendarPage({ data }) {
 
       {/* Legend */}
       <div className="flex gap-4 justify-center mb-6">
-        {PARTICIPANTS.map(p => {
+        {participants.map(p => {
           const IC = ICON_COMPONENTS[p.name]
           return (
             <div key={p.id} className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -224,7 +223,7 @@ export default function SnackCalendarPage({ data }) {
       {/* Weight graph */}
       <WeightGraph
         year={year} month={month} daysInMonth={daysInMonth}
-        weights={weights}
+        weights={weights} participants={participants}
       />
 
       {/* Monthly log */}
